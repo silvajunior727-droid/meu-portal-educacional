@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>LOGIN DO PORTAL EDUCACIONAL INTEGRADO</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <style>
+    body {font-family:'Segoe UI',Arial,sans-serif; background: linear-gradient(120deg,#d5e5fd 60%, #95d3fc 100%); margin:0;}
+    .center{max-width:420px;margin:60px auto;padding:32px 30px 25px 30px;
+      background:#fff;border-radius:26px;box-shadow:0 2px 32px #badffb;text-align:center;position:relative;}
+    .login-title{font-size:1.42em;font-weight:bold;margin-bottom:18px;color:#1565c0;margin-top:5px;}
+    .form-group {margin-bottom:18px;text-align:left;}
+    .form-group label {
+      display:block;font-size:1.12em;font-weight:500;margin-bottom:6px;margin-left:2px;color: #11658f;}
+    .input-icon { position:relative; }
+    .input-icon input {
+      width:100%;padding:13px 34px 13px 12px;
+      border-radius:11px;border:1px solid #badffb;background:#f8fbfd;transition:border 0.18s;font-size:1em;outline:none;box-sizing: border-box;}
+    .input-icon input:focus { border:2px solid #43a1e3;}
+    .show-eye-btn {
+      position:absolute;right:7px;top:50%;transform:translateY(-50%);
+      background:none; border:none; cursor:pointer; font-size:1.19em; color:#54a2cd; padding:0; margin:0;
+      width:36px;height:36px;display:flex;align-items:center;justify-content:center;}
+    button{margin-top:13px;padding:13px 33px;font-size:1.07em;background:linear-gradient(90deg,#43a1e3 55%,#1ea3ca 100%);color:#fff;border-radius:11px;border:none;cursor:pointer;font-weight:600;box-shadow:0 1px 8px #b5cfea;}
+    button:active{background:#1565c0;}
+    .login-admin-btn{background:#f7b900;color:#fff;margin-top:18px;font-weight:bold;padding:11px 22px;font-size:1em;border-radius:8px;border:none;}
+    .login-admin-btn:hover{background:#dd9400;}
+    .msg{color:#d9223f;margin:12px;font-size:1.08em;}
+    .ok{color:#118929;}
+    .creditos { text-align: center; margin-top:42px;color:#888;font-size:1.02em;}
+    #umodal, #admin-popup{position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:10000;background:rgba(31,77,127,0.18);display:none;align-items:center;justify-content:center;}
+    .admin-box, .modal-box{background:#fff;padding:34px 44px 24px 44px;border-radius:20px;box-shadow:0 0 38px #aaccee; max-width:540px;}
+    .admin-title{font-size:1.14em;font-weight:bold;color:#11658f;margin-bottom:21px;}
+    .modal-title{font-size:1.08em;color:#136cb1;margin-bottom:22px;font-weight:600;}
+    .modal-btn{margin-top:12px;padding:11px 33px;font-size:1.07em;background:#43a1e3;color:#fff;border-radius:8px;border:none;}
+    .admin-user{background:#f4f8fc;margin:8px 0 10px 0;padding:12px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;font-size:1.06em}
+    .admin-btn{margin-left:6px;background:#0288d1;color:#fff;padding:3.5px 15px;border-radius:8px;border:none;cursor:pointer;font-size:0.98em;}
+    .admin-btn.edit{background:#f1ab1e;}
+    .admin-btn.del{background:#f23438;}
+    .close-admin{float:right;font-size:1.43em;color:#009;cursor:pointer;}
+    .hide {display:none;}
+  </style>
+</head>
+<body>
+<div class="center" id="login-area">
+  <div class="login-title">LOGIN DO PORTAL EDUCACIONAL INTEGRADO</div>
+  <div class="form-group">
+    <label for="email">Digite seu e-mail:</label>
+    <div class="input-icon">
+      <input type="email" id="email" placeholder="Digite seu e-mail" autocomplete="username">
+    </div>
+  </div>
+  <div class="form-group">
+    <label for="senha">Digite sua senha:</label>
+    <div class="input-icon">
+      <input type="password" id="senha" placeholder="Digite sua senha">
+      <button tabindex="-1" type="button" class="show-eye-btn" id="login-eye" onclick="toggleShowPass('senha','login-eye')" aria-label="Mostrar/ocultar senha"><span id="login-eye-icon">👁️</span></button>
+    </div>
+  </div>
+  <button onclick="loginSistema()">Entrar</button>
+  <div class="msg" id="msg-login"></div>
+  <button class="login-admin-btn" onclick="loginAdmin()">Área do Administrador</button>
+</div>
+<!-- MODAL TROCA DE SENHA ALUNO OU ADMIN -->
+<div id="umodal" class="hide">
+  <div class="modal-box">
+    <div class="modal-title" id="umodal-titulo"></div>
+    <input type="password" id="nova-senha" placeholder="Nova senha">
+    <input type="password" id="nova-senha2" placeholder="Repita a nova senha">
+    <button class="modal-btn" onclick="salvarNovaSenha()">Salvar nova senha</button>
+    <div class="msg" id="msg-umodal"></div>
+  </div>
+</div>
+<!-- POPUP ADMINISTRADOR -->
+<div id="admin-popup" class="hide">
+  <div class="admin-box" id="admin-box">
+    <span class="close-admin" onclick="fecharAdminPopup()">✖️</span>
+    <div class="admin-title">Painel do Administrador</div>
+    <div id="admin-users-list"></div>
+    <div style="margin-top:22px;">
+      <button onclick="abrirCadastroAdmin()">Cadastrar novo aluno</button>
+    </div>
+    <div class="msg" id="msg-admin"></div>
+  </div>
+</div>
+<script>
+  // Firebase config (insira o seu de verdade!)
+  const firebaseConfig = {
+    apiKey: "AIzaSyB7li5djuItNnWS-cfDwIzg0iSURZZRrag",
+    authDomain: "portaleducacional-c1464.firebaseapp.com",
+    projectId: "portaleducacional-c1464",
+    storageBucket: "portaleducacional-c1464.appspot.com",
+    messagingSenderId: "5239057681",
+    appId: "1:5239057681:web:623d0582a8833008feb0b0"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const ADMIN_EMAIL = "silvajunior727@gmail.com";
+  let tipoLogin = "aluno";
+  let emailAtual = "";
+  // Função do olho
+  function toggleShowPass(fieldId,iconId){
+    const field=document.getElementById(fieldId);
+    const icon=document.getElementById(iconId+"-icon");
+    if(field.type==="password"){ field.type="text"; icon.innerText="🙈"; }
+    else{ field.type="password"; icon.innerText="👁️"; }
+  }
+  // Login genérico — aluno ou admin
+  function loginSistema(){
+    tipoLogin = "aluno";
+    let email = document.getElementById("email").value.trim().toLowerCase();
+    let senha = document.getElementById("senha").value;
+    emailAtual = email;
+    // Primeiro acesso: senha "123"
+    let novaSenha = localStorage.getItem("senha_"+email);
+    if(!novaSenha && senha === "123"){
+      abrirModalTroca("aluno");
+      return;
+    }
+    if(novaSenha && senha === novaSenha){
+      document.getElementById("msg-login").innerText = "Login aprovado!";
+      // Aqui você pode redirecionar o aluno para a área do portal, quizzes etc, se quiser
+      return;
+    }
+    document.getElementById("msg-login").innerText = "Senha inválida! Tente novamente.";
+  }
+  // Botão do administrador — aceita só 1 cadastro no email programado
+  function loginAdmin(){
+    tipoLogin = "admin";
+    let email = document.getElementById("email").value.trim().toLowerCase();
+    let senha = document.getElementById("senha").value;
+    emailAtual = email;
+    if(email !== ADMIN_EMAIL){
+      document.getElementById("msg-login").innerText = "Somente o administrador pode acessar este painel!";
+      return;
+    }
+    // Primeiro acesso: senha "123"
+    let novaSenha = localStorage.getItem("senha_"+email);
+    if(!novaSenha && senha === "123"){
+      abrirModalTroca("admin");
+      return;
+    }
+    if(novaSenha && senha === novaSenha){
+      document.getElementById("msg-login").innerText = "";
+      // Autentica no Firebase para exibir painel
+      auth.signInWithEmailAndPassword(email, senha)
+        .then(()=>{ mostrarPainelAdmin(); })
+        .catch(()=>{ document.getElementById("msg-login").innerText = "Login de administrador inválido!"; });
+    } else {
+      document.getElementById("msg-login").innerText = "Senha inválida! Tente novamente.";
+    }
+  }
+  // MODAL/troca senha
+  function abrirModalTroca(tipo){
+    document.getElementById("umodal").classList.remove("hide");
+    document.getElementById("umodal-titulo").innerText = tipo==="admin" ? "Primeiro acesso do administrador – escolha sua nova senha" : "Primeiro acesso do aluno – escolha sua nova senha";
+    document.getElementById("nova-senha").value = "";
+    document.getElementById("nova-senha2").value = "";
+    document.getElementById("msg-umodal").innerText = "";
+  }
+  function salvarNovaSenha(){
+    let nova = document.getElementById("nova-senha").value;
+    let nova2 = document.getElementById("nova-senha2").value;
+    if(nova.length<4){
+      document.getElementById("msg-umodal").innerText="A senha deve ter pelo menos 4 caracteres!";
+      return;
+    }
+    if(nova !== nova2){
+      document.getElementById("msg-umodal").innerText="As senhas não coincidem!";
+      return;
+    }
+    // Salva no localStorage — funciona para aluno ou admin!
+    localStorage.setItem("senha_"+emailAtual, nova);
+    document.getElementById("umodal").classList.add("hide");
+    document.getElementById("nova-senha").value="";
+    document.getElementById("nova-senha2").value="";
+    document.getElementById("msg-login").innerText = "Senha criada! Faça login com sua nova senha.";
+  }
+  // Painel do administrador
+  async function mostrarPainelAdmin(){
+    document.getElementById("admin-popup").classList.remove("hide");
+    let lista = await db.collection("alunos").get();
+    let html="";
+    lista.forEach(doc=>{
+      let u=doc.data();
+      html+=`<div class="admin-user">${u.nome||u.email} <span>
+        <button class="admin-btn edit" onclick="editarAluno('${doc.id}','${u.email}','${u.nivel}')">Editar</button>
+        <button class="admin-btn del" onclick="excluirAluno('${doc.id}','${u.email}')">Excluir</button></span></div>`;
+    });
+    document.getElementById("admin-users-list").innerHTML = html;
+    document.getElementById("msg-admin").innerText="";
+  }
+  function fecharAdminPopup(){
+    document.getElementById("admin-popup").classList.add("hide");
+    auth.signOut();
+  }
+  function abrirCadastroAdmin(){
+    let nome = prompt("Nome do aluno:");
+    let email = prompt("Email do aluno a cadastrar:");
+    let nivel = prompt("Nível (basico|intermediario|avancado):", "basico");
+    let senha = prompt("Senha para este aluno:");
+    if(!email||!nivel||!senha){
+      alert("Todos os campos são obrigatórios!");
+      return;
+    }
+    auth.createUserWithEmailAndPassword(email,senha)
+    .then(res=>{
+      return db.collection("alunos").doc(res.user.uid).set({
+        email: email,nivel: nivel,nome:nome||email.split('@')[0]
+      });
+    })
+    .then(()=>{ mostrarPainelAdmin(); })
+    .catch(e=>{
+      document.getElementById("msg-admin").innerText="Erro ao cadastrar: "+e.message;
+    });
+  }
+  function editarAluno(uid,email,nivel){
+    let novoNivel = prompt(`Editar nível de ${email}: (basico|intermediario|avancado)`,nivel);
+    if(!novoNivel) return;
+    db.collection("alunos").doc(uid).update({nivel: novoNivel})
+    .then(()=>{ mostrarPainelAdmin(); });
+  }
+  function excluirAluno(uid,email){
+    if(confirm(`Tem certeza que deseja excluir o aluno ${email}?`))
+      db.collection("alunos").doc(uid).delete().then(()=>{ mostrarPainelAdmin(); });
+  }
+</script>
+</body>
+</html>
